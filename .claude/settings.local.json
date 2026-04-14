@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(git:*)",
+      "WebFetch(domain:docs.astral.sh)",
+      "WebFetch(domain:hatch.pypa.io)",
+      "WebFetch(domain:prettier.io)",
+      "WebFetch(domain:github.com)",
+      "Bash(bd doctor:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:pypi.org)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  }
+}
