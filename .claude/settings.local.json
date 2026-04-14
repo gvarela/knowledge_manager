@@ -9,7 +9,11 @@
       "WebFetch(domain:github.com)",
       "Bash(bd doctor:*)",
       "WebFetch(domain:api.github.com)",
-      "WebFetch(domain:pypi.org)"
+      "WebFetch(domain:pypi.org)",
+      "Bash(uv run:*)",
+      "Bash(bd ready:*)",
+      "Bash(bd close:*)",
+      "Bash(bd show:*)"
     ]
   },
   "sandbox": {
