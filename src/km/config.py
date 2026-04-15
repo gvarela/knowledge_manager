@@ -4,6 +4,20 @@ from pathlib import Path, PurePosixPath
 
 from km import ChunkConfig, ScanConfig, VaultConfig
 
+_KNOWN_TOP_LEVEL = {"defaults", "scan", "overrides"}
+_CHUNK_FIELDS = set(ChunkConfig.__dataclass_fields__)
+_SCAN_FIELDS = set(ScanConfig.__dataclass_fields__)
+_OVERRIDE_FIELDS = _CHUNK_FIELDS | {"files", "index"}
+
+
+def _validate_keys(mapping: dict, allowed: set[str], section: str) -> None:
+    for key in mapping:
+        if key not in allowed:
+            valid = ", ".join(sorted(allowed))
+            raise ValueError(
+                f"Unknown key '{key}' in [{section}] (valid keys: {valid})"
+            )
+
 
 def load_config(vault_path: Path) -> VaultConfig:
     """Load config from .km/config.toml, falling back to defaults."""
@@ -14,9 +28,17 @@ def load_config(vault_path: Path) -> VaultConfig:
     with open(config_path, "rb") as f:
         raw = tomllib.load(f)
 
+    _validate_keys(raw, _KNOWN_TOP_LEVEL, "config.toml")
+
     defaults = raw.get("defaults", {})
+    _validate_keys(defaults, _CHUNK_FIELDS, "defaults")
+
     scan_raw = raw.get("scan", {})
+    _validate_keys(scan_raw, _SCAN_FIELDS, "scan")
+
     overrides_raw = raw.get("overrides", [])
+    for override in overrides_raw:
+        _validate_keys(override, _OVERRIDE_FIELDS, "overrides")
 
     chunk_kwargs = {}
     for key in ("split_on", "strip_frontmatter", "min_chunk_chars", "strategy"):

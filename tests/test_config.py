@@ -1,3 +1,5 @@
+import pytest
+
 from km.config import load_config, resolve_for_file
 
 
@@ -33,3 +35,47 @@ def test_override_resolution(tmp_path):
 
     default = resolve_for_file(config, "People/Nick/README.md")
     assert default.strategy == "default"
+
+
+def test_load_config_rejects_unknown_top_level_section(tmp_path):
+    km_dir = tmp_path / ".km"
+    km_dir.mkdir()
+    (km_dir / "config.toml").write_text("[bogus]\nfoo = 1\n")
+    with pytest.raises(ValueError, match="bogus"):
+        load_config(tmp_path)
+
+
+def test_load_config_rejects_unknown_key_in_defaults(tmp_path):
+    km_dir = tmp_path / ".km"
+    km_dir.mkdir()
+    (km_dir / "config.toml").write_text('[defaults]\nstratgy = "atomic"\n')
+    with pytest.raises(ValueError, match="stratgy"):
+        load_config(tmp_path)
+
+
+def test_load_config_rejects_unknown_key_in_scan(tmp_path):
+    km_dir = tmp_path / ".km"
+    km_dir.mkdir()
+    (km_dir / "config.toml").write_text('[scan]\nincluded = ["*.md"]\n')
+    with pytest.raises(ValueError, match="included"):
+        load_config(tmp_path)
+
+
+def test_load_config_rejects_unknown_key_in_override(tmp_path):
+    km_dir = tmp_path / ".km"
+    km_dir.mkdir()
+    (km_dir / "config.toml").write_text(
+        '[[overrides]]\nfiles = ["Memory/**"]\nstratgy = "atomic"\n'
+    )
+    with pytest.raises(ValueError, match="stratgy"):
+        load_config(tmp_path)
+
+
+def test_load_config_raises_on_malformed_toml(tmp_path):
+    km_dir = tmp_path / ".km"
+    km_dir.mkdir()
+    (km_dir / "config.toml").write_text("this is = not [ valid toml")
+    # tomllib raises TOMLDecodeError; lock in "malformed TOML surfaces an error"
+    # without pinning the exact exception type across Python versions.
+    with pytest.raises(Exception):  # noqa: B017
+        load_config(tmp_path)
