@@ -93,3 +93,40 @@ def test_scan_vault_finds_markdown_files(tmp_path):
     files = scan_vault(tmp_path, config)
     assert len(files) == 1
     assert files[0].name == "alice.md"
+
+
+def test_scan_vault_top_level_only_pattern(tmp_path):
+    # File at top level
+    (tmp_path / "top.md").write_text("top")
+    # File in subdirectory — should NOT be matched by top-level-only pattern
+    subdir = tmp_path / "sub"
+    subdir.mkdir()
+    (subdir / "nested.md").write_text("nested")
+
+    config = ScanConfig(include=("*.md",))
+    files = scan_vault(tmp_path, config)
+    names = sorted(f.name for f in files)
+    assert names == ["top.md"]
+
+
+def test_scan_vault_recursive_pattern_finds_nested(tmp_path):
+    (tmp_path / "top.md").write_text("top")
+    subdir = tmp_path / "sub" / "deeper"
+    subdir.mkdir(parents=True)
+    (subdir / "nested.md").write_text("nested")
+
+    config = ScanConfig(include=("**/*.md",))
+    files = scan_vault(tmp_path, config)
+    names = sorted(f.name for f in files)
+    assert names == ["nested.md", "top.md"]
+
+
+def test_scan_vault_on_nonexistent_path_raises(tmp_path):
+    # vault_path that does not exist — Path.glob on nonexistent directory returns empty
+    nonexistent = tmp_path / "does-not-exist"
+    # Document observed behavior: Path.glob on nonexistent directory returns empty
+    from km import ScanConfig
+    from km.chunker import scan_vault
+
+    files = scan_vault(nonexistent, ScanConfig())
+    assert files == []

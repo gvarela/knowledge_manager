@@ -10,11 +10,7 @@ def scan_vault(vault_path: Path, config: ScanConfig) -> list[Path]:
     """Scan vault for files matching config patterns, excluding dotdirs."""
     results: set[Path] = set()
     for pattern in config.include:
-        # Convert **/*.md → rglob("*.md"); rglob handles recursion
-        rglob_pattern = (
-            pattern.removeprefix("**/") if pattern.startswith("**/") else pattern
-        )
-        for path in vault_path.rglob(rglob_pattern):
+        for path in vault_path.glob(pattern):
             if not path.is_file():
                 continue
             if config.exclude_dotdirs:
