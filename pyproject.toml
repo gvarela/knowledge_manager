@@ -3,7 +3,7 @@ name = "knowledge-manager"
 version = "0.1.0"
 description = "Semantic search for Obsidian vaults"
 requires-python = ">=3.12"
-dependencies = ["sqlite-vec"]
+dependencies = ["sqlite-vec", "fastembed"]
 
 [project.scripts]
 km = "km.cli:main"
