@@ -46,6 +46,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_update.add_argument("paths", nargs="+", help="Vault-relative file paths")
 
     sub.add_parser("stats", help="Show index statistics")
+    sub.add_parser("prime", help="Output context for Claude Code hooks")
 
     p_config = sub.add_parser("config", help="Manage configuration")
     config_sub = p_config.add_subparsers(dest="config_command")
@@ -187,6 +188,50 @@ def _parse_value(s: str):
     return s
 
 
+_PRIME_TEXT = """\
+# km — Semantic Search Context
+
+> Auto-injected by `km prime` on session start / context recovery.
+
+## Available Commands
+
+```bash
+km search "<query>" [--top-k N]   # semantic search (auto-discovers .km/)
+km search "<query>" --json        # machine-parseable output for skills
+km index [<vault-path>]           # full re-index (or create new index)
+km update <file1.md> [file2.md…]  # incremental re-index after file writes
+km stats [--json]                 # file/chunk counts
+km config show [--json]           # dump current config
+km config get "<file>" [--json]   # resolved config for a specific file
+km config set "<pattern>" k=v…    # add/update override (e.g., strategy=atomic)
+```
+
+## When to Use
+
+- **Semantic search**: `km search --json "<topic>" --top-k 10` finds content by meaning,
+  not just keywords. Use when grep/glob miss semantic matches.
+- **After writing files**: `km update <paths…>` keeps the index fresh. Call after
+  skills write or modify vault files.
+- **Config management**: `km config set/get/show` lets you adjust chunking rules
+  without editing TOML directly.
+
+## Key Notes
+
+- `--json` is a **global** flag — place it before the subcommand: `km --json search "…"`
+- Auto-discovers `.km/` by walking parent directories (like `.git/`)
+- All paths are vault-relative (e.g., `People/Nick/README.md`)
+"""
+
+
+def _cmd_prime(args: argparse.Namespace) -> None:
+    vault_root = discover_km_root()
+    db_path = vault_root / ".km" / "index.db"
+    output = _PRIME_TEXT
+    if not db_path.exists():
+        output += "\n**Warning:** No index found. Run `km index` to build it.\n"
+    print(output)
+
+
 def _cmd_config_set(args: argparse.Namespace) -> None:
     vault_root = discover_km_root()
     config_path = vault_root / ".km" / "config.toml"
@@ -262,6 +307,8 @@ def main() -> None:
         _cmd_update(args)
     elif args.command == "stats":
         _cmd_stats(args)
+    elif args.command == "prime":
+        _cmd_prime(args)
     elif args.command == "config":
         if args.config_command == "show":
             _cmd_config_show(args)

@@ -307,3 +307,26 @@ def test_cli_config_set_defaults(tmp_path, monkeypatch, capsys):
     with open(tmp_path / ".km" / "config.toml", "rb") as f:
         data = tomllib.load(f)
     assert data["defaults"]["min_chunk_chars"] == 500
+
+
+def test_cli_prime(tmp_path, monkeypatch, capsys):
+    """km prime outputs markdown context for Claude Code hooks."""
+    (tmp_path / ".km").mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["km", "prime"])
+    main()
+    captured = capsys.readouterr()
+    assert "km search" in captured.out
+    assert "km index" in captured.out
+    assert "km update" in captured.out
+    assert "km config" in captured.out
+
+
+def test_cli_prime_detects_no_index(tmp_path, monkeypatch, capsys):
+    """km prime warns when .km/ exists but index.db is missing."""
+    (tmp_path / ".km").mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["km", "prime"])
+    main()
+    captured = capsys.readouterr()
+    assert "no index" in captured.out.lower() or "km index" in captured.out
