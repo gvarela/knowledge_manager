@@ -3,13 +3,13 @@ project: phase-4-cli
 ticket: null
 created: 2026-04-16
 created_timestamp: 2026-04-16T20:00:00Z
-status: not-started
+status: complete
 last_updated: 2026-04-16
 assignee: gvarela
-current_phase: 1
+current_phase: 3
 total_tasks: 5
-completed_tasks: 0
-git_commit: d385d73
+completed_tasks: 5
+git_commit: e867c4f
 git_branch: main
 repository: knowledge-manager
 tags: [tasks, tracking, phase-4-cli]
@@ -274,12 +274,27 @@ Verify: `bd show km-bjn` — all blockers closed. Close milestone.
 
 ## Implementation Discoveries
 
-Things to determine during implementation:
-- Exact `config show` human output format (TOML dump vs custom key-value)
-- Whether `config set defaults` sentinel pattern is ergonomic enough
-- Content preview truncation length for search output (80 chars? configurable?)
+### Resolved during implementation
 
-Note: Update this section with findings as implementation progresses.
+- **`config show` format**: TOML-like sections (`[defaults]`, `[scan]`, `[[overrides]]`) for human output, nested dict for JSON. Works well.
+- **`config set defaults` sentinel**: Ergonomic enough — `km config set defaults min_chunk_chars=500` is clear.
+- **Content preview**: First line of chunk content, max 80 chars with `...` truncation. Adequate for terminal.
+- **tomli-w inline tables**: `tomli_w.dump()` uses inline table syntax for arrays of tables (`overrides = [{files = "..."}]`). Valid TOML, parses correctly, slightly different visual style than hand-written `[[overrides]]` blocks.
+- **Searcher injection in tests**: Patching `km.search.Searcher.__init__` (not `km.cli.Searcher`) with `ConstantEmbedder` is the cleanest pattern. Workers discovered this independently.
+- **`uv tool install --reinstall`**: Needed after code changes — `--force` alone uses cached wheel. `--reinstall` forces rebuild.
+
+### `km prime` — Plugin pattern for Claude Code integration
+
+Added `km prime` subcommand (not in original PLAN.md) to mirror `bd prime` from beads. Outputs markdown context for Claude Code hooks (SessionStart, PreCompact). This is the mechanism that makes Claude "know" about `km` across sessions — same pattern that makes beads effective.
+
+**Integration recipe for any vault**:
+1. `uv tool install /path/to/knowledge-manager` — puts `km` on PATH
+2. `km index /path/to/vault` — creates `.km/` with config + index
+3. Add `.km/.gitignore` — ignore `index.db` and `models/`, track `config.toml`
+4. Add `"Bash(km:*)"` to vault's `.claude/settings.local.json` permissions
+5. Add `km prime` to vault's SessionStart and PreCompact hooks
+6. Add `km update` to PostToolUse hooks on Write/Edit for `.md` files
+7. Update retrieval skills to use `km search --json` instead of grep/glob
 
 ---
 

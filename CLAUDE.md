@@ -37,7 +37,7 @@ __main__.py   → cli
 
 `embedder.py` deliberately has no `km` imports — it takes strings and returns float lists, keeping the fastembed adapter swappable without touching domain types.
 
-`cli.py` is a thin argparse shell. All logic lives in `search.py` (orchestration) or below.
+`cli.py` is a thin argparse shell. All logic lives in `search.py` (orchestration) or below. `km prime` outputs markdown context for Claude Code hooks (SessionStart/PreCompact) — same pattern as `bd prime`.
 
 ## .km/ Directory and Auto-Discovery
 
