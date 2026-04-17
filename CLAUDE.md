@@ -29,7 +29,7 @@ chunker.py    → __init__ (Chunk, ChunkConfig, ScanConfig)
 store.py      → __init__ (Chunk)
 embedder.py   → (nothing from km — plain strings/floats in and out)
 search.py     → config, chunker, store, embedder, __init__
-cli.py        → search, config
+cli.py        → search, config, store, __init__ (+ tomllib, tomli_w for config set)
 __main__.py   → cli
 ```
 
@@ -56,3 +56,4 @@ Follow Kent Beck's TDD: red (failing test) → green (minimal passing code) → 
 - `@pytest.mark.slow` on any test that downloads models or takes >2s
 - Glob matching uses `PurePosixPath.match()`, not `fnmatch` — `**` means recursive, `*` means single directory
 - Frontmatter regex: `r'^---\n.*?\n---\n?'` with `re.DOTALL` — trailing newline optional
+- CLI tests use `monkeypatch.setattr(sys, "argv", [...])` + `capsys` to test `main()` in-process. Inject `ConstantEmbedder` via `monkeypatch.setattr("km.search.Searcher.__init__", ...)` to avoid model downloads.
