@@ -418,3 +418,41 @@ def test_cli_sync_json(tmp_path, monkeypatch, capsys):
     data = json.loads(captured.out)
     assert data["added"] == 1
     assert data["removed"] == 1
+
+
+def test_cli_init_creates_km_dir_config_gitignore_and_indexes(
+    tmp_path, monkeypatch, capsys
+):
+    """km init <path> creates .km/, config.toml, .gitignore, and indexes."""
+    (tmp_path / "note.md").write_text("# Hello\nSome content here.")
+    _make_patched_searcher(monkeypatch)
+    monkeypatch.setattr(sys, "argv", ["km", "init", str(tmp_path)])
+    main()
+    captured = capsys.readouterr()
+
+    # .km/ directory created
+    assert (tmp_path / ".km").is_dir()
+    # config.toml with comments
+    config_text = (tmp_path / ".km" / "config.toml").read_text()
+    assert "[defaults]" in config_text or "defaults" in config_text
+    # .gitignore
+    gitignore_text = (tmp_path / ".km" / ".gitignore").read_text()
+    assert "index.db" in gitignore_text
+    assert "models" in gitignore_text
+    # indexed
+    assert "Indexed" in captured.out
+    assert (tmp_path / ".km" / "index.db").exists()
+
+
+def test_cli_init_does_not_overwrite_existing_config(tmp_path, monkeypatch, capsys):
+    """km init preserves existing config.toml if present."""
+    km_dir = tmp_path / ".km"
+    km_dir.mkdir()
+    (km_dir / "config.toml").write_text("[defaults]\nmin_chunk_chars = 999\n")
+    (tmp_path / "note.md").write_text("# Hello\nSome content here.")
+    _make_patched_searcher(monkeypatch)
+    monkeypatch.setattr(sys, "argv", ["km", "init", str(tmp_path)])
+    main()
+
+    config_text = (km_dir / "config.toml").read_text()
+    assert "999" in config_text  # preserved, not overwritten
