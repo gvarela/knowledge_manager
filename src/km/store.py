@@ -119,6 +119,10 @@ class Store:
             for row in cur.fetchall()
         ]
 
+    def file_paths(self) -> set[str]:
+        cur = self._conn.execute("SELECT DISTINCT file_path FROM chunks")
+        return {row[0] for row in cur.fetchall()}
+
     def stats(self) -> dict[str, int]:
         cur = self._conn.execute(
             "SELECT COUNT(DISTINCT file_path), COUNT(*) FROM chunks"

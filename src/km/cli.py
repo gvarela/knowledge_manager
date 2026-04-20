@@ -53,6 +53,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p_update.add_argument("paths", nargs="+", help="Vault-relative file paths")
 
     sub.add_parser("stats", help="Show index statistics", parents=[json_parent])
+    sub.add_parser(
+        "sync",
+        help="Sync index with vault (add new, remove deleted)",
+        parents=[json_parent],
+    )
     sub.add_parser("prime", help="Output context for Claude Code hooks")
 
     p_config = sub.add_parser("config", help="Manage configuration")
@@ -137,6 +142,21 @@ def _cmd_update(args: argparse.Namespace) -> None:
         print(f"Updated {stats['files']} files ({stats['chunks']} chunks)")
 
 
+def _cmd_sync(args: argparse.Namespace) -> None:
+    vault_root = discover_km_root()
+
+    with Searcher(vault_root) as s:
+        result = s.sync()
+
+    if args.json:
+        print(json.dumps(result))
+    else:
+        print(
+            f"Synced: {result['added']} added, {result['removed']} removed"
+            f" ({result['chunks']} chunks)"
+        )
+
+
 def _cmd_stats(args: argparse.Namespace) -> None:
     vault_root = discover_km_root()
     db_path = vault_root / ".km" / "index.db"
@@ -218,6 +238,7 @@ km search "<query>" --json        # machine-parseable output for skills
 km search "<query>" --dir People  # filter results to a directory
 km index [<vault-path>]           # full re-index (or create new index)
 km update <file1.md> [file2.md…]  # incremental re-index after file writes
+km sync [--json]                  # add new files, remove deleted (handles moves)
 km stats [--json]                 # file/chunk counts
 km config show [--json]           # dump current config
 km config get "<file>" [--json]   # resolved config for a specific file
@@ -334,6 +355,8 @@ def main() -> None:
         _cmd_search(args)
     elif args.command == "update":
         _cmd_update(args)
+    elif args.command == "sync":
+        _cmd_sync(args)
     elif args.command == "stats":
         _cmd_stats(args)
     elif args.command == "prime":

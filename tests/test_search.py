@@ -220,3 +220,28 @@ def test_should_index_helper_first_match_wins() -> None:
     assert _should_index(config, "Inbox/note.md") is False
     # No override matches Other/note.md → default True
     assert _should_index(config, "Other/note.md") is True
+
+
+def test_sync_detects_new_deleted_and_unchanged(tmp_path: Path) -> None:
+    """sync() adds new files, removes deleted files, skips unchanged."""
+    (tmp_path / "keep.md").write_text("# Keep\nkeep this", encoding="utf-8")
+    (tmp_path / "delete_me.md").write_text("# Delete\ndelete this", encoding="utf-8")
+
+    with Searcher(tmp_path, embedder=ConstantEmbedder()) as searcher:
+        searcher.index_vault()
+        assert searcher._store.stats()["files"] == 2
+
+        # Simulate move: delete one file, add a new one
+        (tmp_path / "delete_me.md").unlink()
+        (tmp_path / "new.md").write_text("# New\nnew content", encoding="utf-8")
+
+        result = searcher.sync()
+
+        assert result["added"] == 1
+        assert result["removed"] == 1
+        stats = searcher._store.stats()
+        assert stats["files"] == 2  # keep.md + new.md
+        paths = searcher._store.file_paths()
+        assert "keep.md" in paths
+        assert "new.md" in paths
+        assert "delete_me.md" not in paths

@@ -113,3 +113,36 @@ class Searcher:
             chunks_inserted += len(items)
 
         return {"files": files_processed, "chunks": chunks_inserted}
+
+    def sync(self) -> dict[str, int]:
+        """Diff vault filesystem against index. Add new, remove deleted."""
+        config = load_config(self._vault_root)
+        vault_paths = scan_vault(self._vault_root, config.scan)
+
+        on_disk = set()
+        for absolute in vault_paths:
+            relative = str(absolute.relative_to(self._vault_root))
+            if _should_index(config, relative):
+                on_disk.add(relative)
+
+        in_store = self._store.file_paths()
+
+        to_add = on_disk - in_store
+        to_remove = in_store - on_disk
+
+        for relative in to_remove:
+            self._store.upsert_file(relative, [])
+
+        added_chunks = 0
+        for relative in to_add:
+            absolute = self._vault_root / relative
+            text = absolute.read_text(encoding="utf-8")
+            items = self._chunk_and_embed_file(text, relative, config)
+            self._store.upsert_file(relative, items)
+            added_chunks += len(items)
+
+        return {
+            "added": len(to_add),
+            "removed": len(to_remove),
+            "chunks": added_chunks,
+        }

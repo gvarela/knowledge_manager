@@ -278,3 +278,18 @@ def test_knn_search_round_trips_all_chunk_fields(store):
     assert got.directory == "People"
     # sanity on distance type
     assert isinstance(distance, float)
+
+
+def test_file_paths_returns_indexed_paths(store):
+    from km import Chunk
+
+    store.bulk_insert(
+        [
+            (Chunk("a.md", "", "alpha"), [0.1] * 384),
+            (Chunk("a.md", "## Two", "alpha two"), [0.2] * 384),
+            (Chunk("b.md", "", "beta"), [0.3] * 384),
+            (Chunk("sub/c.md", "", "gamma"), [0.4] * 384),
+        ]
+    )
+    paths = store.file_paths()
+    assert paths == {"a.md", "b.md", "sub/c.md"}

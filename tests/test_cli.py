@@ -382,3 +382,39 @@ def test_cli_search_dir_filter(tmp_path, monkeypatch, capsys):
     data = json.loads(captured.out)
     assert len(data["results"]) > 0
     assert all(r["directory"] == "People" for r in data["results"])
+
+
+def test_cli_sync(tmp_path, monkeypatch, capsys):
+    """km sync adds new files and removes deleted files from index."""
+    _setup_indexed_vault(tmp_path, monkeypatch)
+    capsys.readouterr()
+
+    # Simulate a file move: delete alpha.md, add gamma.md
+    (tmp_path / "alpha.md").unlink()
+    (tmp_path / "gamma.md").write_text("# Gamma\nGamma content here.")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["km", "sync"])
+    main()
+    captured = capsys.readouterr()
+    assert "added" in captured.out.lower() or "1" in captured.out
+    assert "removed" in captured.out.lower() or "1" in captured.out
+
+
+def test_cli_sync_json(tmp_path, monkeypatch, capsys):
+    """km sync --json returns structured delta report."""
+    import json
+
+    _setup_indexed_vault(tmp_path, monkeypatch)
+    capsys.readouterr()
+
+    (tmp_path / "alpha.md").unlink()
+    (tmp_path / "gamma.md").write_text("# Gamma\nGamma content here.")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["km", "sync", "--json"])
+    main()
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert data["added"] == 1
+    assert data["removed"] == 1
