@@ -30,30 +30,40 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="km", description="Semantic search for Obsidian vaults"
     )
-    parser.add_argument("--json", action="store_true", help="Output in JSON format")
     sub = parser.add_subparsers(dest="command")
 
-    p_index = sub.add_parser("index", help="Build search index")
+    json_parent = argparse.ArgumentParser(add_help=False)
+    json_parent.add_argument(
+        "--json", action="store_true", help="Output in JSON format"
+    )
+
+    p_index = sub.add_parser("index", help="Build search index", parents=[json_parent])
     p_index.add_argument(
         "vault_path", nargs="?", help="Path to vault (default: auto-discover)"
     )
 
-    p_search = sub.add_parser("search", help="Semantic search")
+    p_search = sub.add_parser("search", help="Semantic search", parents=[json_parent])
     p_search.add_argument("query", help="Search query")
     p_search.add_argument("--top-k", type=int, default=10, help="Number of results")
 
-    p_update = sub.add_parser("update", help="Re-index specific files")
+    p_update = sub.add_parser(
+        "update", help="Re-index specific files", parents=[json_parent]
+    )
     p_update.add_argument("paths", nargs="+", help="Vault-relative file paths")
 
-    sub.add_parser("stats", help="Show index statistics")
+    sub.add_parser("stats", help="Show index statistics", parents=[json_parent])
     sub.add_parser("prime", help="Output context for Claude Code hooks")
 
     p_config = sub.add_parser("config", help="Manage configuration")
     config_sub = p_config.add_subparsers(dest="config_command")
-    config_sub.add_parser("show", help="Show resolved config")
-    p_get = config_sub.add_parser("get", help="Show config for a file")
+    config_sub.add_parser("show", help="Show resolved config", parents=[json_parent])
+    p_get = config_sub.add_parser(
+        "get", help="Show config for a file", parents=[json_parent]
+    )
     p_get.add_argument("file_path", help="Vault-relative file path")
-    p_set = config_sub.add_parser("set", help="Set config override")
+    p_set = config_sub.add_parser(
+        "set", help="Set config override", parents=[json_parent]
+    )
     p_set.add_argument("pattern", help='Glob pattern (e.g., "Memory/**") or "defaults"')
     p_set.add_argument("settings", nargs="+", help="key=value pairs")
 
@@ -208,7 +218,7 @@ km config set "<pattern>" k=v…    # add/update override (e.g., strategy=atomic
 
 ## When to Use
 
-- **Semantic search**: `km search --json "<topic>" --top-k 10` finds content by meaning,
+- **Semantic search**: `km search "<topic>" --top-k 10 --json` finds content by meaning,
   not just keywords. Use when grep/glob miss semantic matches.
 - **After writing files**: `km update <paths…>` keeps the index fresh. Call after
   skills write or modify vault files.
@@ -217,7 +227,7 @@ km config set "<pattern>" k=v…    # add/update override (e.g., strategy=atomic
 
 ## Key Notes
 
-- `--json` is a **global** flag — place it before the subcommand: `km --json search "…"`
+- `--json` goes after the subcommand: `km search "…" --json`
 - Auto-discovers `.km/` by walking parent directories (like `.git/`)
 - All paths are vault-relative (e.g., `People/Nick/README.md`)
 """

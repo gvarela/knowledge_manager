@@ -40,7 +40,7 @@ km stats
 | `km config set <pattern> k=v...` | Add/update config override |
 | `km prime` | Output context for Claude Code hooks |
 
-Global `--json` flag on all commands for machine-parseable output. Place before the subcommand: `km --json search "query"`.
+`--json` flag on all commands for machine-parseable output. Place after the subcommand: `km search "query" --json`.
 
 ## The `.km/` Directory
 

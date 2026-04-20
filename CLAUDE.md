@@ -41,7 +41,7 @@ __main__.py   → cli
 
 ## .km/ Directory and Auto-Discovery
 
-Everything km-related lives at `<vault-root>/.km/`: `config.toml` (chunking rules) + `index.db` (vectors). `km` walks parent directories to find `.km/` (same pattern as `.git/` and `.beads/`). Skills call `km search "query"` from the vault root with no flags. `km config show/set/get` lets LLMs manage config without parsing TOML.
+Everything km-related lives at `<vault-root>/.km/`: `config.toml` (chunking rules) + `index.db` (vectors). `km` walks parent directories to find `.km/` (same pattern as `.git/` and `.beads/`). Skills call `km search "query" --json` from the vault root. `km config show/set/get` lets LLMs manage config without parsing TOML. `--json` goes after the subcommand (e.g., `km stats --json`), not before.
 
 ## Development Methodology
 

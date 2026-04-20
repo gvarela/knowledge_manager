@@ -69,7 +69,7 @@ def test_cli_index_json_output(tmp_path, monkeypatch, capsys):
     """km --json index <path> outputs JSON stats."""
     (tmp_path / "note.md").write_text("# Hello\nSome content here.")
     _make_patched_searcher(monkeypatch)
-    monkeypatch.setattr(sys, "argv", ["km", "--json", "index", str(tmp_path)])
+    monkeypatch.setattr(sys, "argv", ["km", "index", str(tmp_path), "--json"])
     main()
     captured = capsys.readouterr()
     import json
@@ -119,7 +119,7 @@ def test_cli_search_json(tmp_path, monkeypatch, capsys):
     _setup_indexed_vault(tmp_path, monkeypatch)
     capsys.readouterr()
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(sys, "argv", ["km", "--json", "search", "testing"])
+    monkeypatch.setattr(sys, "argv", ["km", "search", "testing", "--json"])
     main()
     captured = capsys.readouterr()
     data = json.loads(captured.out)
@@ -141,7 +141,7 @@ def test_cli_search_top_k(tmp_path, monkeypatch, capsys):
     capsys.readouterr()
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
-        sys, "argv", ["km", "--json", "search", "testing", "--top-k", "1"]
+        sys, "argv", ["km", "search", "testing", "--top-k", "1", "--json"]
     )
     main()
     captured = capsys.readouterr()
@@ -182,7 +182,7 @@ def test_cli_stats_json(tmp_path, monkeypatch, capsys):
     _setup_indexed_vault(tmp_path, monkeypatch)
     capsys.readouterr()
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(sys, "argv", ["km", "--json", "stats"])
+    monkeypatch.setattr(sys, "argv", ["km", "stats", "--json"])
     main()
     captured = capsys.readouterr()
     data = json.loads(captured.out)
@@ -190,6 +190,20 @@ def test_cli_stats_json(tmp_path, monkeypatch, capsys):
     assert "chunks" in data
     assert data["files"] == 2
     assert data["chunks"] == 2
+
+
+def test_cli_json_flag_after_subcommand(tmp_path, monkeypatch, capsys):
+    """km search <query> --json works (flag after subcommand)."""
+    import json
+
+    _setup_indexed_vault(tmp_path, monkeypatch)
+    capsys.readouterr()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["km", "search", "testing", "--json"])
+    main()
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert "results" in data
 
 
 def test_cli_config_show(tmp_path, monkeypatch, capsys):
@@ -209,7 +223,7 @@ def test_cli_config_show_json(tmp_path, monkeypatch, capsys):
 
     (tmp_path / ".km").mkdir()
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(sys, "argv", ["km", "--json", "config", "show"])
+    monkeypatch.setattr(sys, "argv", ["km", "config", "show", "--json"])
     main()
     captured = capsys.readouterr()
     data = json.loads(captured.out)
@@ -241,7 +255,7 @@ def test_cli_config_get_json(tmp_path, monkeypatch, capsys):
     )
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
-        sys, "argv", ["km", "--json", "config", "get", "Memory/insight.md"]
+        sys, "argv", ["km", "config", "get", "Memory/insight.md", "--json"]
     )
     main()
     captured = capsys.readouterr()
