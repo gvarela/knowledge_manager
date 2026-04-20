@@ -34,6 +34,7 @@ km stats
 | `km index [path]` | Full index (with path = first run; without = re-index) |
 | `km search <query> [--top-k N] [--dir DIR]` | Semantic search, ranked by distance |
 | `km update <paths...>` | Re-index specific files (~2s per file) |
+| `km sync` | Add new files, remove deleted (handles moves) |
 | `km stats` | File and chunk counts |
 | `km config show` | Dump resolved config |
 | `km config get <file>` | Show resolved config for a specific file |
