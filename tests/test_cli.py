@@ -344,3 +344,41 @@ def test_cli_prime_detects_no_index(tmp_path, monkeypatch, capsys):
     main()
     captured = capsys.readouterr()
     assert "no index" in captured.out.lower() or "km index" in captured.out
+
+
+def test_cli_prime_shows_index_stats(tmp_path, monkeypatch, capsys):
+    """km prime shows file/chunk counts and index age when index exists."""
+    _setup_indexed_vault(tmp_path, monkeypatch)
+    capsys.readouterr()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["km", "prime"])
+    main()
+    captured = capsys.readouterr()
+    assert "2 files" in captured.out
+    assert "2 chunks" in captured.out
+
+
+def test_cli_search_dir_filter(tmp_path, monkeypatch, capsys):
+    """km search --dir People/ filters results to that directory."""
+    import json
+
+    people = tmp_path / "People"
+    people.mkdir()
+    meetings = tmp_path / "Meetings"
+    meetings.mkdir()
+    (people / "alice.md").write_text("# Alice\nAlice works on billing.")
+    (meetings / "standup.md").write_text("# Standup\nDiscussed billing updates.")
+    _make_patched_searcher(monkeypatch)
+    monkeypatch.setattr(sys, "argv", ["km", "index", str(tmp_path)])
+    main()
+    capsys.readouterr()
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys, "argv", ["km", "search", "billing", "--dir", "People", "--json"]
+    )
+    main()
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert len(data["results"]) > 0
+    assert all(r["directory"] == "People" for r in data["results"])

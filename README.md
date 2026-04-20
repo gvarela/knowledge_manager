@@ -32,7 +32,7 @@ km stats
 | Command | Description |
 |---------|-------------|
 | `km index [path]` | Full index (with path = first run; without = re-index) |
-| `km search <query> [--top-k N]` | Semantic search, ranked by distance |
+| `km search <query> [--top-k N] [--dir DIR]` | Semantic search, ranked by distance |
 | `km update <paths...>` | Re-index specific files (~2s per file) |
 | `km stats` | File and chunk counts |
 | `km config show` | Dump resolved config |

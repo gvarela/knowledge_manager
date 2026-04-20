@@ -45,6 +45,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_search = sub.add_parser("search", help="Semantic search", parents=[json_parent])
     p_search.add_argument("query", help="Search query")
     p_search.add_argument("--top-k", type=int, default=10, help="Number of results")
+    p_search.add_argument("--dir", help="Filter results to this directory")
 
     p_update = sub.add_parser(
         "update", help="Re-index specific files", parents=[json_parent]
@@ -84,9 +85,15 @@ def _cmd_index(args: argparse.Namespace) -> None:
 
 def _cmd_search(args: argparse.Namespace) -> None:
     vault_root = discover_km_root()
+    fetch_k = args.top_k * 5 if args.dir else args.top_k
 
     with Searcher(vault_root) as s:
-        results = s.search(args.query, k=args.top_k)
+        results = s.search(args.query, k=fetch_k)
+
+    if args.dir:
+        dir_prefix = args.dir.rstrip("/")
+        results = [r for r in results if r.chunk.directory == dir_prefix]
+    results = results[: args.top_k]
 
     if args.json:
         print(
@@ -208,6 +215,7 @@ _PRIME_TEXT = """\
 ```bash
 km search "<query>" [--top-k N]   # semantic search (auto-discovers .km/)
 km search "<query>" --json        # machine-parseable output for skills
+km search "<query>" --dir People  # filter results to a directory
 km index [<vault-path>]           # full re-index (or create new index)
 km update <file1.md> [file2.md…]  # incremental re-index after file writes
 km stats [--json]                 # file/chunk counts
@@ -234,11 +242,22 @@ km config set "<pattern>" k=v…    # add/update override (e.g., strategy=atomic
 
 
 def _cmd_prime(args: argparse.Namespace) -> None:
+    import time
+
     vault_root = discover_km_root()
     db_path = vault_root / ".km" / "index.db"
     output = _PRIME_TEXT
     if not db_path.exists():
         output += "\n**Warning:** No index found. Run `km index` to build it.\n"
+    else:
+        with Store(db_path) as store:
+            stats = store.stats()
+        age_days = int((time.time() - db_path.stat().st_mtime) / 86400)
+        age_str = "today" if age_days == 0 else f"{age_days}d ago"
+        output += (
+            f"\n**Index:** {stats['files']} files, {stats['chunks']} chunks"
+            f" (updated {age_str})\n"
+        )
     print(output)
 
 
