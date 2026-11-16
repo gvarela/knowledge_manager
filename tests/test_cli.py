@@ -503,3 +503,22 @@ def test_cli_search_dir_returns_top_k_when_other_dir_dominates(
     main()
     results = json.loads(capsys.readouterr().out)["results"]
     assert [r["directory"] for r in results] == ["Wiki", "Wiki"]
+
+
+@pytest.mark.parametrize("dir_arg", ["./Wiki", "Wiki/", "./Wiki/"])
+def test_cli_search_dir_normalizes_path_spelling(
+    dir_arg, tmp_path, monkeypatch, capsys
+):
+    """--dir ./Wiki, Wiki/ and ./Wiki/ all mean the top-level Wiki directory."""
+    import json
+
+    _setup_dominated_vault(tmp_path, monkeypatch)
+    capsys.readouterr()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["km", "search", "near", "--dir", dir_arg, "--top-k", "2", "--json"],
+    )
+    main()
+    results = json.loads(capsys.readouterr().out)["results"]
+    assert [r["directory"] for r in results] == ["Wiki", "Wiki"]

@@ -3,7 +3,7 @@ import json
 import sys
 import tomllib
 from dataclasses import asdict
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import tomli_w
 
@@ -154,7 +154,7 @@ def _cmd_index(args: argparse.Namespace) -> None:
 
 def _cmd_search(args: argparse.Namespace) -> None:
     vault_root = discover_km_root()
-    directory = args.dir.rstrip("/") if args.dir else None
+    directory = "/".join(PurePosixPath(args.dir).parts) if args.dir else None
 
     with Searcher(vault_root) as s:
         results = s.search(args.query, k=args.top_k, directory=directory)
