@@ -293,3 +293,21 @@ def test_file_paths_returns_indexed_paths(store):
     )
     paths = store.file_paths()
     assert paths == {"a.md", "b.md", "sub/c.md"}
+
+
+def test_knn_search_with_directory_returns_k_from_that_dir_when_other_dir_dominates(
+    store,
+):
+    query = [1.0] + [0.0] * 383
+    near = [(Chunk(f"Raw/r{i}.md", "", f"raw {i}"), query) for i in range(20)]
+    far = [
+        (Chunk(f"Wiki/w{i}.md", "", f"wiki {i}"), [0.0] * i + [1.0] + [0.0] * (383 - i))
+        for i in range(1, 4)
+    ]
+    store.bulk_insert(near + far)
+
+    results = store.knn_search(query, k=2, directory="Wiki")
+
+    assert [c.directory for c, _ in results] == ["Wiki", "Wiki"]
+    distances = [d for _, d in results]
+    assert distances == sorted(distances)

@@ -456,3 +456,69 @@ def test_cli_init_does_not_overwrite_existing_config(tmp_path, monkeypatch, caps
 
     config_text = (km_dir / "config.toml").read_text()
     assert "999" in config_text  # preserved, not overwritten
+
+
+class _NearFarEmbedder:
+    """Texts containing 'near' embed onto axis 0, everything else onto axis 1."""
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [
+            [1.0, 0.0] + [0.0] * 382 if "near" in t else [0.0, 1.0] + [0.0] * 382
+            for t in texts
+        ]
+
+
+def _setup_dominated_vault(tmp_path, monkeypatch):
+    """12 Raw/ files sit nearest the query 'near'; 2 Wiki/ files are far away."""
+    from km.search import Searcher
+
+    original_init = Searcher.__init__
+
+    def _patched_init(self, vault_root, store=None, embedder=None):
+        original_init(self, vault_root, store=store, embedder=_NearFarEmbedder())
+
+    monkeypatch.setattr("km.search.Searcher.__init__", _patched_init)
+    (tmp_path / "Raw").mkdir()
+    (tmp_path / "Wiki").mkdir()
+    for i in range(12):
+        (tmp_path / "Raw" / f"r{i}.md").write_text(f"# R{i}\nnear raw note {i}")
+    for i in range(2):
+        (tmp_path / "Wiki" / f"w{i}.md").write_text(f"# W{i}\nwiki page {i}")
+    monkeypatch.setattr(sys, "argv", ["km", "index", str(tmp_path)])
+    main()
+    monkeypatch.chdir(tmp_path)
+
+
+def test_cli_search_dir_returns_top_k_when_other_dir_dominates(
+    tmp_path, monkeypatch, capsys
+):
+    """--dir must not come back short just because another dir is nearer."""
+    import json
+
+    _setup_dominated_vault(tmp_path, monkeypatch)
+    capsys.readouterr()
+    monkeypatch.setattr(
+        sys, "argv", ["km", "search", "near", "--dir", "Wiki", "--top-k", "2", "--json"]
+    )
+    main()
+    results = json.loads(capsys.readouterr().out)["results"]
+    assert [r["directory"] for r in results] == ["Wiki", "Wiki"]
+
+
+@pytest.mark.parametrize("dir_arg", ["./Wiki", "Wiki/", "./Wiki/"])
+def test_cli_search_dir_normalizes_path_spelling(
+    dir_arg, tmp_path, monkeypatch, capsys
+):
+    """--dir ./Wiki, Wiki/ and ./Wiki/ all mean the top-level Wiki directory."""
+    import json
+
+    _setup_dominated_vault(tmp_path, monkeypatch)
+    capsys.readouterr()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["km", "search", "near", "--dir", dir_arg, "--top-k", "2", "--json"],
+    )
+    main()
+    results = json.loads(capsys.readouterr().out)["results"]
+    assert [r["directory"] for r in results] == ["Wiki", "Wiki"]

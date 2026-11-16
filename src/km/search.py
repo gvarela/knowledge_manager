@@ -59,9 +59,11 @@ class Searcher:
         if self._owns_store:
             self._store.close()
 
-    def search(self, query: str, k: int = 10) -> list[SearchResult]:
+    def search(
+        self, query: str, k: int = 10, directory: str | None = None
+    ) -> list[SearchResult]:
         query_vec = self._embedder.embed([query])[0]
-        pairs = self._store.knn_search(query_vec, k=k)
+        pairs = self._store.knn_search(query_vec, k=k, directory=directory)
         return [SearchResult(chunk=c, distance=d) for c, d in pairs]
 
     def _chunk_and_embed_file(
