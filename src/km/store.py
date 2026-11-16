@@ -36,6 +36,25 @@ _CREATE_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_chunks_file_path ON chunks(file_path);
 """
 
+_KNN_SQL = """
+SELECT c.file_path, c.section_header, c.content, v.distance
+FROM vec_chunks v
+JOIN chunks c ON c.id = v.rowid
+WHERE v.embedding MATCH ?
+  AND v.k = ?
+ORDER BY v.distance
+"""
+
+_KNN_IN_DIRECTORY_SQL = """
+SELECT c.file_path, c.section_header, c.content,
+       vec_distance_l2(v.embedding, ?) AS distance
+FROM chunks c
+JOIN vec_chunks v ON v.rowid = c.id
+WHERE c.directory = ?
+ORDER BY distance
+LIMIT ?
+"""
+
 
 class Store:
     def __init__(self, db_path: Path, dim: int = 384) -> None:
@@ -101,19 +120,21 @@ class Store:
                 self._insert_pair(chunk, embedding)
 
     def knn_search(
-        self, query_embedding: list[float], k: int = 10
+        self, query_embedding: list[float], k: int = 10, directory: str | None = None
     ) -> list[tuple[Chunk, float]]:
-        sql = """
-        SELECT c.file_path, c.section_header, c.content, v.distance
-        FROM vec_chunks v
-        JOIN chunks c ON c.id = v.rowid
-        WHERE v.embedding MATCH ?
-          AND v.k = ?
-        ORDER BY v.distance
+        """Return the k nearest chunks, optionally restricted to one directory.
+
+        The directory-restricted path scores every chunk in that directory with
+        an exact L2 distance (the same metric vec0 uses), so it always returns
+        min(k, chunks in directory) results regardless of what other
+        directories hold.
         """
         self._check_dim(query_embedding)
         query_vec = sqlite_vec.serialize_float32(query_embedding)
-        cur = self._conn.execute(sql, (query_vec, k))
+        if directory is None:
+            cur = self._conn.execute(_KNN_SQL, (query_vec, k))
+        else:
+            cur = self._conn.execute(_KNN_IN_DIRECTORY_SQL, (query_vec, directory, k))
         return [
             (Chunk(file_path=row[0], section_header=row[1], content=row[2]), row[3])
             for row in cur.fetchall()
